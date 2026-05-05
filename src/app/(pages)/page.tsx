@@ -1,96 +1,149 @@
 "use client";
 
-import dayjs, { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { AnimatePresence, motion } from "framer-motion";
+import { Swords, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Availability } from "../enums/Availability";
-import { Slot, SlotTimes } from "../types/Slot";
-import Link from "next/link";
+import {  dayjsLocalizer } from 'react-big-calendar'
+import { Sidebar } from "@/app/components/setUp/Sidebar";
+import { FloatingDecor } from "@/app/components/FloatingDecor";
+import { TopNav } from "@/app/components/TopNav";
+import { Calendar } from "@/app/components/Calendar";
 
-export default function Home() {
-  dayjs.extend(utc);
-  dayjs.extend(timezone);
-  const [startDay, setStartDay] = useState<Date>(dayjs.utc("2023-01-01T00:00:00Z").toDate());
-  const [endDay, setEndDay] = useState<Date>(dayjs.utc("2023-01-02T23:59:59Z").toDate());
-  const [userTimeZone, setUserTimeZone] = useState<string>(dayjs.tz.guess());
-  const [option, setOption] = useState<Availability>(0);
-  const [timezones, setTimezones] = useState<string[]>([]);
-  const selectedTime = new Date("2023-01-01T12:00:00Z");
-  const [shiftKeyDown, setShiftKeyDown] = useState<boolean>(false);
-  const [ctrlKeyDown, setCtrlKeyDown] = useState<boolean>(false);
-  const [lastClicked, setLastClicked] = useState<Date>();
-  const [hovered, setHovered] = useState<Dayjs>();
-
-  const [availableTimes, setAvailableTimes] = useState<Slot[]>([]);
-
-  const [excludedTimes, setExcludedTimes] = useState<string[]>([
-    new Date("2023-01-01T01:00:00Z").toISOString(),
-    new Date("2023-01-01T04:00:00Z").toISOString(),
-  ]);
-
-  useEffect(() => {
-    const onKeyDown = (key: globalThis.KeyboardEvent) => {
-      if (key.shiftKey) {
-        setShiftKeyDown(true);
-      }
-      if (key.ctrlKey) {
-        setCtrlKeyDown(true);
-      }
+dayjs.extend(utc);
+dayjs.extend(timezone);
+export default function SetUp() {
+    const [timezone, setTimezone] = useState('America/New_York')
+  const [startTime, setStartTime] = useState('19:00')
+  const [endTime, setEndTime] = useState('23:00')
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set())
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [showSealed, setShowSealed] = useState(false)
+  const [eventName, setEventName] = useState('')
+ 
+  const toggleDate = (dateStr: string) => {
+    const newDates = new Set(selectedDates)
+    if (newDates.has(dateStr)) {
+      newDates.delete(dateStr)
+    } else {
+      newDates.add(dateStr)
     }
-    const onKeyUp = (key: globalThis.KeyboardEvent) => {
-      if (!key.shiftKey) {
-        setShiftKeyDown(false);
-      }
-      if (!key.ctrlKey) {
-        setCtrlKeyDown(false);
-      }
-    }
-    setTimezones([...Intl.supportedValuesOf("timeZone")]);
-    document.addEventListener('keydown', onKeyDown,);
-    document.addEventListener('keyup', onKeyUp);
-
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('keyup', onKeyUp);
-    }
-  }, []);
-
-  useEffect(() => {
-    setUpTimes(startDay, endDay);
-  }, [startDay, endDay, userTimeZone]);
-
-  const setUpTimes = (startDay: Date, endDay: Date) => {
-    const availabilitySet: SlotTimes[] = [];
-    availableTimes.map(d => {
-      availabilitySet.push(...d.times.filter(t => t.selected != null || t.available != null));
-    })
-    const available: any[] = [];
-    const localStartDate = dayjs.tz(startDay, userTimeZone).set("hour", 0).set("minute", 0).set("second", 0);
-    const localEndDate = dayjs.tz(endDay, userTimeZone).set("hour", 23).set("minute", 59).set("second", 59);
-    const days = dayjs.utc(localEndDate).diff(localStartDate, "day") + 1;
-    for (let index = 0; index < days; index++) {
-      const day = dayjs(localStartDate).add(index, "day").toDate();
-      const times = [];
-      for (let index = 0; index < 24; index++) {
-        const time = dayjs(day).hour(day.getHours() + index).toDate();
-        const existing = availabilitySet.find(t => t.time.toISOString() === time.toISOString());
-        times.push({
-          time: time,
-          selected: existing?.selected ?? null,
-          disabled: excludedTimes.includes(time.toISOString()) || time.toISOString() < startDay.toISOString() || time.toISOString() > endDay.toISOString(),
-          available: existing?.available ?? null
-        });
-      }
-      available.push({ day, times });
-    }
-    setAvailableTimes(available);
+    setSelectedDates(newDates)
   }
-
+  const handleClear = () => {
+    setSelectedDates(new Set())
+  }
+  const handleSave = () => {
+    setShowSealed(true)
+  }
   return (
-    <div className="overflow-auto">
-      <div className="flex flex-col gap-4 items-center justify-center h-dvh">
-      </div>
-    </div >
-  );
+    <div className="relative flex flex-col overflow-hidden">
+      
+
+      <main className="z-10 relative flex lg:flex-row flex-col flex-1 gap-6 mx-auto p-4 md:p-6 w-full max-w-7xl">
+        <Sidebar
+        eventName={eventName}
+        setEventName={setEventName}
+          timezone={timezone}
+          setTimezone={setTimezone}
+          startTime={startTime}
+          setStartTime={setStartTime}
+          endTime={endTime}
+          setEndTime={setEndTime}
+          selectedDatesCount={selectedDates.size}
+          onClear={handleClear}
+          onSave={handleSave}
+        />
+
+        <Calendar
+          selectedDates={selectedDates}
+          toggleDate={toggleDate}
+          currentMonth={currentMonth}
+          setCurrentMonth={setCurrentMonth}
+        />
+      </main>
+
+      <AnimatePresence>
+        {showSealed && (
+          <motion.div
+            initial={{
+              opacity: 0,
+            }}
+            animate={{
+              opacity: 1,
+            }}
+            exit={{
+              opacity: 0,
+            }}
+            className="z-50 fixed inset-0 flex justify-center items-center bg-ink/60 backdrop-blur-sm p-4"
+            onClick={() => setShowSealed(false)}
+          >
+            <motion.div
+              initial={{
+                scale: 0.7,
+                y: 30,
+                rotate: -3,
+              }}
+              animate={{
+                scale: 1,
+                y: 0,
+                rotate: 0,
+              }}
+              exit={{
+                scale: 0.7,
+                y: 30,
+                opacity: 0,
+              }}
+              transition={{
+                type: 'spring',
+                stiffness: 220,
+                damping: 18,
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative p-8 w-full max-w-md text-center parchment-panel"
+            >
+              <button
+                onClick={() => setShowSealed(false)}
+                className="top-3 right-3 absolute text-ink-light hover:text-burgundy"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+              <motion.div
+                animate={{
+                  rotate: [0, -10, 10, -5, 5, 0],
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{
+                  duration: 1.2,
+                  repeat: Infinity,
+                  repeatDelay: 1.5,
+                }}
+                className="flex justify-center items-center bg-burgundy shadow-[0_0_24px_rgba(184,134,11,0.6)] mx-auto mb-4 border-4 border-gold rounded-full w-20 h-20 text-gold"
+              >
+                <Swords size={36} />
+              </motion.div>
+              <h3 className="mb-2 font-heading font-bold text-burgundy text-2xl">
+                The Covenant is Sealed!
+              </h3>
+              <p className="mb-6 font-body text-ink-light italic">
+                Your party shall be summoned across {selectedDates.size}{' '}
+                {selectedDates.size === 1 ? 'session' : 'sessions'} from{' '}
+                {startTime} to {endTime}, by the laws of{' '}
+                {timezone.replace('_', ' ')}.
+              </p>
+              <button
+                onClick={() => setShowSealed(false)}
+                className="btn-primary"
+              >
+                Onward!
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
 }

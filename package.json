@@ -10,17 +10,21 @@
   },
   "dependencies": {
     "dayjs": "^1.11.13",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.14.0",
     "next": "15.1.0",
     "react": "^19.0.0",
+    "react-big-calendar": "^1.18.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.4.0",
-    "react-select": "^5.9.0",
+    "react-multi-date-picker": "^4.5.2",
     "react-tooltip": "^5.28.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^19",
+    "@types/react-big-calendar": "^1.16.1",
     "@types/react-dom": "^19",
     "daisyui": "^4.12.22",
     "eslint": "^9",

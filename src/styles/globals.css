@@ -1,10 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --parchment-base: #f4e8d0;
+    --parchment-light: #fdf8e9;
+    --parchment-dark: #e3d5b8;
+    --burgundy: #7a1f1f;
+    --burgundy-dark: #5a1515;
+    --gold: #b8860b;
+    --gold-light: #c9a961;
+    --ink: #2c241b;
+    --ink-light: #4a3f32;
+  }
+  
+  
+
+  body {
+    @apply bg-[var(--parchment-base)] font-body text-[var(--ink)];
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading text-[var(--ink)];
+  }
+}
+
 @layer components {
-  .btn-outline.btn-neutral {
-    border-color: oklch(var(--n));
-    color: oklch(var(--n));
+  .parchment-panel {
+    @apply relative bg-[var(--parchment-light)] shadow-md border border-[var(--gold-light)] rounded-lg overflow-hidden;
+    box-shadow: 0 4px 6px -1px rgba(44, 36, 27, 0.1), 0 2px 4px -1px rgba(44, 36, 27, 0.06), inset 0 0 20px rgba(227, 213, 184, 0.3);
+  }
+
+  .parchment-panel::before {
+    content: '';
+    @apply absolute inset-0 opacity-30 border border-[var(--gold)] rounded-lg pointer-events-none;
+    margin: 3px;
+  }
+
+  .btn-primary {
+    @apply bg-[var(--burgundy)] hover:bg-[var(--burgundy-dark)] disabled:opacity-50 shadow-sm hover:shadow-[0_0_10px_rgba(184_134_11_/_0.4)] px-4 py-2 border border-[var(--gold)] rounded font-heading font-semibold text-[var(--parchment-light)] tracking-wider transition-all duration-200 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent hover:bg-[var(--burgundy)] disabled:opacity-50 shadow-sm px-4 py-2 border border-[var(--burgundy)] rounded font-heading font-semibold text-[var(--burgundy)] hover:text-[var(--parchment-light)] tracking-wider transition-all duration-200 disabled:cursor-not-allowed;
+  }
+
+  .input-fantasy {
+    @apply bg-[var(--parchment-base)] px-3 py-2 border border-[var(--gold-light)] focus:border-[var(--gold)] rounded focus:outline-none focus:ring-[var(--gold)] focus:ring-1 font-body text-[var(--ink)] transition-colors;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }

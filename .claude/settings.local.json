@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const fs = require\\('fs'\\); const src = fs.readFileSync\\('./node_modules/react-big-calendar/lib/Calendar.js', 'utf8'\\); const idx = src.indexOf\\('getView'\\); console.log\\(src.substring\\(Math.max\\(0, idx-100\\), idx+800\\)\\)\")",
+      "Bash(npm install *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(JSON.stringify\\({...p.dependencies, ...p.devDependencies}, null, 2\\)\\)\")"
+    ]
+  }
+}
