@@ -267,8 +267,6 @@ export function SelectorPage({
         toast.error(res.error)
       }
     })
-    //redirect(`/council/${session?.slug}`)
-    setTimeout(() => setSubmitted(false), 3500)
   }
 
   if (sortedDates.length === 0) {
@@ -373,7 +371,7 @@ export function SelectorPage({
               disabled={updating}
               value={name}
               onChange={(e) => {
-                if(previousAvailabilities.map((a: any) => a.name).includes(e.target.value)){
+                if((previousAvailabilities || []).map((a: any) => a.name).includes(e.target.value)){
                   setDuplicateName(true)
                 }
                 setName(e.target.value)
@@ -384,7 +382,7 @@ export function SelectorPage({
             <span className="text-xs">{duplicateName && <>Name already taken! <br/>
             <a className="text-burgundy underline cursor-pointer"
             onClick={() => {
-              const prevAvailability = previousAvailabilities.find((a:any) => a.name === name)
+              const prevAvailability = (previousAvailabilities || []).find((a:any) => a.name === name)
               if (prevAvailability) {
                 setHeroClass(prevAvailability.heroClass)
                 setLocalTimezone(prevAvailability.localTimezone)
@@ -649,6 +647,9 @@ export function SelectorPage({
               <p className="font-body text-ink-light text-sm italic">
                 {name || 'Brave adventurer'}, your pledge has been recorded.
               </p>
+        <button onClick={()=>{redirect("/council/"+session.slug)}} className="btn-primary">
+            Check Availabilityof Others
+          </button>
             </motion.div>
           </motion.div>
         )}
@@ -699,9 +700,6 @@ export default function SelectorPageRoute() {
         if(res.status === ApiStatus.Success) {
           setSession(res.data)
         }
-        else{
-          redirect('/')
-        }
       })
     }
   },[slug])
@@ -711,4 +709,4 @@ export default function SelectorPageRoute() {
       previousAvailabilities={previousAvailabilities}
     />
   )
-}
+}  

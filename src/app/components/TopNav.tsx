@@ -37,7 +37,8 @@ export function TopNav() {
               repeat: Infinity,
               ease: 'easeInOut',
             }}
-            className="bg-burgundy shadow-[0_0_12px_rgba(184,134,11,0.4)] p-2 border border-gold/60 rounded-lg text-gold"
+            className="bg-burgundy shadow-[0_0_12px_rgba(184,134,11,0.4)] p-2 border border-gold/60 rounded-lg text-gold cursor-pointer"
+          onClick={()=>{redirect("/")}}
           >
             <Dices size={26} />
           </motion.div>

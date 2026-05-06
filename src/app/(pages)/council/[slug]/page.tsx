@@ -74,9 +74,9 @@ export function CouncilPage({
     })
     GetAllAvailabilities(slug).then((res:ApiResponse) => {
       if (res.status === ApiStatus.Success) {
-        setParty(res.data.map((p:any) => ({name:p.name, icon:p.heroClass})))
+        setParty((res.data||[]).map((p:any) => ({name:p.name, icon:p.heroClass})))
         const processed: Record<string, PlayerAvailability> = {}
-        for (const player of res.data) {
+        for (const player of res.data||[]) {
           const slotsByDate: Record<string, Map<number, Status>> = {}
           for (const [date, rawSlots] of Object.entries(player.slotsByDate || {})) {
             const m = new Map<number, Status>()
@@ -223,7 +223,7 @@ function statusesForRun(
       if (next.has(name)) next.delete(name)
       else next.add(name)
       // Ensure minPartySize >= required + DM
-      const reqCount = next.size + 1 // +1 for DM
+      const reqCount = next.size// +1 for DM
       if (minPartySize < reqCount) setMinPartySize(reqCount)
       return next
     })
