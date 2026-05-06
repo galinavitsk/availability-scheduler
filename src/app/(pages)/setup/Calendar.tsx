@@ -31,16 +31,15 @@ const CIVIL_MONTHS = [
   'November',
   'December',
 ]
+type BurstKey = { key: string; n: number } | null
+
 export function Calendar({
   selectedDates,
   toggleDate,
   currentMonth,
   setCurrentMonth,
 }: CalendarProps) {
-  const [burstKey, setBurstKey] = useState<{
-    key: string
-    n: number
-  } | null>(null)
+  const [burstKey, setBurstKey] = useState<BurstKey>(null)
   const [direction, setDirection] = useState(1)
   const year = currentMonth.getFullYear()
   const month = currentMonth.getMonth()
@@ -244,7 +243,7 @@ export function Calendar({
       {/* Calendar Grid */}
       <div className="flex flex-col flex-1 bg-parchment-light/50 p-4">
         <div className="grid grid-cols-7 mb-2">
-          {DAYS_OF_WEEK.map((day, idx) => (
+          {DAYS_OF_WEEK.map((day) => (
             <div
               key={day}
               className={`text-center font-heading font-bold text-sm py-2 `}

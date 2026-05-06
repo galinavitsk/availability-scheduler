@@ -1,8 +1,5 @@
 "use client";
 
-import dayjs from "dayjs";
-import timezone from "dayjs/plugin/timezone";
-import utc from "dayjs/plugin/utc";
 import { motion } from "framer-motion";
 import { Castle } from "lucide-react";
 import { redirect } from "next/navigation";

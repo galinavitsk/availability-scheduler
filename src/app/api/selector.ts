@@ -1,4 +1,6 @@
+import { Status } from "../lib/availability";
 import { ApiResponse, ApiStatus } from "../types/ApiResponse";
+import { Session } from "../types/Session";
 import { ApiHost } from "./util";
 
 export const GetSession=async (slug:string): Promise<ApiResponse>=>{

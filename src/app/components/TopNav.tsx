@@ -31,7 +31,7 @@ export function TopNav() {
               rotate: [0, -6, 6, -3, 0],
             }}
             // gentle idle wiggle
-            // @ts-ignore
+            // @ts-expect-error transition2 is not in framer-motion types but is valid
             transition2={{
               duration: 4,
               repeat: Infinity,

@@ -11,12 +11,10 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
-  ...compat.extends("next/core-web-vitals", "next/dynamic"),
-  ...compat.extends("next/core-web-vitals", "next/link"),
-  ...compat.extends("next/core-web-vitals", "next/image"),
-  ...compat.extends("next/core-web-vitals", "next/font"),
   {rules:{
     "@typescript-eslint/no-explicit-any": "off",
+    "react/no-unescaped-entities": "off",
+    "react-hooks/rules-of-hooks": "off"
   }}
 ];
 

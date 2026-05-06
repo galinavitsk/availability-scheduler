@@ -6,14 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
   Castle,
-  Clock,
   Sparkles as SparkIcon,
   Crown,
   Hourglass,
   Calendar as CalIcon,
   CheckCircle2,
   Sword,
-  Lock,
   Star,
   UserCheck,
   Minus,
@@ -28,11 +26,8 @@ import {
   type Status,
 } from '@/app/lib/availability'
 import { redirect, useParams } from 'next/navigation';
-import { red } from 'next/dist/lib/picocolors';
 import { ApiResponse, ApiStatus } from '@/app/types/ApiResponse';
 import {GetAllAvailabilities, GetSession} from '@/app/api/selector'
-interface CouncilPageProps {
-}
 interface Match {
   dateStr: string
   startMin: number
@@ -48,9 +43,9 @@ interface FindRunsOpts {
   includeMaybes: boolean
 }
 
-export function CouncilPage({
-}: CouncilPageProps) {
-  
+
+function CouncilPage() {
+
   const { slug } = useParams<{ slug: string }>()
   const [desiredHours, setDesiredHours] = useState<number>(2)
   const [includeMaybes, setIncludeMaybes] = useState(false)
@@ -60,7 +55,6 @@ export function CouncilPage({
   const [selectedDates, setSelectedDates] = useState<Set<string> | null>(null)
   const [startTime, setStartTime] = useState('19:00')
   const [endTime, setEndTime] = useState('23:00')
-  const [timeZone, setTimeZone] = useState('UTC')
   type PlayerAvailability = { localTimezone: string; slotsByDate: Record<string, Map<number, Status>> }
   const [partyStatuses, setPartyStatuses] = useState<Record<string, PlayerAvailability>>({})
   useEffect(() => {
@@ -69,7 +63,6 @@ export function CouncilPage({
         setStartTime(res.data.startTime)
         setEndTime(res.data.endTime)
         setSelectedDates(new Set(res.data.selectedDates))
-        setTimeZone(res.data.timezone)
       }
     })
     GetAllAvailabilities(slug).then((res:ApiResponse) => {

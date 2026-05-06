@@ -17,6 +17,6 @@ export const CreateSession=async (name: string, endTime:string, startTime:string
   return {status:ApiStatus.Success, message: res.message, data: res.data}
   }
   catch(e:any){
-    return  { status: ApiStatus.Failure, message: "Failed to save session, refresh and try again." }
+    return  { status: ApiStatus.Failure, message: "Failed to save session, refresh and try again.",data:e }
   }
 }

@@ -1,4 +1,4 @@
-type Session = {
+export type Session = {
     id: string
     name: string
     startTime: string

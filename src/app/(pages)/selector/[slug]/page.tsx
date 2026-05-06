@@ -1,6 +1,6 @@
 "use client"
 import 'rpg-awesome/css/rpg-awesome.min.css'
-import React, { useMemo, useState, useRef,  ComponentType, useEffect } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import { redirect, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -11,9 +11,6 @@ import {
   Send,
   Castle,
   Eraser,
-  Swords,
-  HelpCircle,
-  Shield,
   Wand2,
 } from 'lucide-react'
 import dayjs from 'dayjs'
@@ -30,10 +27,11 @@ function convertTime(timeStr: string, fromTz: string, toTz: string, refDate: str
 }
 import { SessionRow } from './SessionRow'
 import { SearchableSelect } from '@/app/components/SearchableSelect'
-import { generateSlots } from '@/app/lib/availability';
+import { generateSlots,Status } from '@/app/lib/availability';
 import { GetSession,SaveAvailability,GetAllAvailabilities,UpdateAvailability } from '@/app/api/selector';
 import { ApiStatus } from '@/app/types/ApiResponse';
 import { toast } from 'react-toastify';
+import { Session } from '@/app/types/Session';
 type Brush = Status | 'erase'
 interface SelectorPageProps {
   session: Session
@@ -59,49 +57,8 @@ const HEROIC_CLASSES = [
   'ra-hand',
 ]
 
-export const STATUS_META: Record<
-  Status,
-  {
-    label: string
-    flavor: string
-    icon: ComponentType<{
-      size?: number
-    }>
-    brushClass: string
-    cellClass: string
-    pillClass: string
-    dot: string
-  }
-> = {
-  yes: {
-    label: 'Available',
-    flavor: 'I shall answer',
-    icon: Swords,
-    brushClass: 'bg-emerald-800 text-parchment-light border-gold',
-    cellClass: 'bg-emerald-800 hover:bg-emerald-900',
-    pillClass: 'bg-emerald-800 text-parchment-light border-gold',
-    dot: 'bg-gold',
-  },
-  maybe: {
-    label: 'Maybe',
-    flavor: 'Fates permitting',
-    icon: HelpCircle,
-    brushClass: 'bg-gold text-ink border-burgundy',
-    cellClass: 'bg-gold/80 hover:bg-gold',
-    pillClass: 'bg-gold text-ink border-burgundy',
-    dot: 'bg-burgundy',
-  },
-  no: {
-    label: 'Unavailable',
-    flavor: 'I am bound elsewhere',
-    icon: Shield,
-    brushClass: 'bg-burgundy text-parchment-light border-gold',
-    cellClass: 'bg-burgundy hover:bg-burgundy-dark',
-    pillClass: 'bg-burgundy text-parchment-light border-gold',
-    dot: 'bg-gold',
-  },
-}
-export function SelectorPage({
+import { STATUS_META } from './statusMeta'
+function SelectorPage({
   session,
   previousAvailabilities
 }: SelectorPageProps) {

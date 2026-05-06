@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../../styles/globals.css";
-import Link from "next/link";
 import { TopNav } from "../components/TopNav";
 import { FloatingDecor } from "../components/FloatingDecor";
 import { ToastProvider } from "../components/ToastProvider";
+import { Footer } from "../components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,7 +42,7 @@ export default function RootLayout({
       <div className="top-0 right-0 fixed opacity-20 m-4 border-gold border-t-4 border-r-4 rounded-tr-3xl w-32 h-32 pointer-events-none" />
       <div className="bottom-0 left-0 fixed opacity-20 m-4 border-gold border-b-4 border-l-4 rounded-bl-3xl w-32 h-32 pointer-events-none" />
       <div className="right-0 bottom-0 fixed opacity-20 m-4 border-gold border-r-4 border-b-4 rounded-br-3xl w-32 h-32 pointer-events-none" />
-
+      <Footer />
       </body>
     </html>
   );

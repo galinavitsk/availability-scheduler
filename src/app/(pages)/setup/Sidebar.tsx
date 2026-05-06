@@ -3,14 +3,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { SearchableSelect } from '@/app/components/SearchableSelect'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   Globe,
   Clock,
-  CalendarDays,
   Scroll,
   Swords,
-  Dice6,
   Sun,
   Moon,
   Sparkles as SparkIcon,

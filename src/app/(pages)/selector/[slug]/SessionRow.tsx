@@ -4,7 +4,8 @@ import utcPlugin from "dayjs/plugin/utc";
 import { motion } from "framer-motion";
 import { Clock } from "lucide-react";
 import { useMemo } from "react";
-import { STATUS_META } from "./page";
+import { STATUS_META } from "./statusMeta";
+import { Status } from "@/app/lib/availability";
 
 dayjs.extend(utcPlugin);
 dayjs.extend(tzPlugin);
