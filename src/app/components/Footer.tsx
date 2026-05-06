@@ -1,8 +1,6 @@
 "use client";
 import React from 'react'
-import { Dices, Sparkles as SparkIcon } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { redirect } from 'next/navigation';
 export function Footer() {
   return (
     <motion.header
