@@ -325,7 +325,7 @@ export function Sidebar({
             className="flex justify-center items-center gap-2 w-full btn-primary"
           >
             <Swords size={18} />
-            Seal the Covenant
+            Schedule
           </motion.button>
           <button onClick={onClear} className="w-full text-sm btn-secondary">
             Banish All Runes

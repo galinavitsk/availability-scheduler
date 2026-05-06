@@ -1,7 +1,8 @@
+import { minutesToTime12 } from "@/app/lib/availability";
 import { motion } from "framer-motion";
 import { Clock } from "lucide-react";
 import { useMemo } from "react";
-import { minutesToTime12, STATUS_META } from "./page";
+import { STATUS_META } from "./page";
 
 function formatDate(dateStr: string) {
   const [y, m, d] = dateStr.split('-').map(Number)

@@ -8,7 +8,7 @@ import {
   Sparkles as SparkIcon,
   Star,
 } from 'lucide-react'
-import { Sparkles } from './Sparkles'
+import { Sparkles } from '../../components/Sparkles'
 interface CalendarProps {
   selectedDates: Set<string>
   toggleDate: (dateStr: string) => void
@@ -271,7 +271,7 @@ export function Calendar({
                 }}
                 className={`
                   relative p-2 flex flex-col items-end justify-start min-h-[80px] border-2 rounded-md transition-colors duration-200 overflow-hidden
-                  ${cell.isCurrentMonth ? 'bg-parchment-base/80' : 'bg-parchment-dark/30 text-ink-light/40'}
+                  ${!cell.isCurrentMonth ? 'bg-parchment-dark/30 text-ink-light/40' : (!isSelected ? 'bg-parchment-base/80' : '')}
                   ${isSelected ? 'border-gold bg-burgundy text-parchment-light shadow-[inset_0_0_18px_rgba(184,134,11,0.35),0_0_10px_rgba(122,31,31,0.25)] z-10' : 'border-gold-light/20 hover:border-gold hover:bg-parchment-base hover:shadow-[0_0_10px_rgba(184,134,11,0.25)]'}
                   ${!isSelected && cell.isCurrentMonth ? 'bg-gold-light/15' : ''}
                   ${isToday && !isSelected ? 'ring-2 ring-burgundy ring-offset-1 ring-offset-parchment-light' : ''}

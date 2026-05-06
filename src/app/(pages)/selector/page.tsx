@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import dayjs from 'dayjs';
 import { SessionRow } from './SessionRow';
+import { generateSlots, minutesToTime12, timeToMinutes } from '@/app/lib/availability';
 type Brush = Status | 'erase'
 interface SelectorPageProps {
   selectedDates: Set<string>
@@ -27,6 +28,7 @@ interface SelectorPageProps {
   onGoToSetup: () => void
 }
 const SLOT_MINUTES = 30
+
 
 const HEROIC_CLASSES = [
   'Wizard',
@@ -42,6 +44,7 @@ const HEROIC_CLASSES = [
   'Fighter',
   'Monk',
 ]
+
 export const STATUS_META: Record<
   Status,
   {
@@ -84,38 +87,6 @@ export const STATUS_META: Record<
     dot: 'bg-gold',
   },
 }
-// ----- helpers -----
-function timeToMinutes(t: string) {
-  const [h, m] = t.split(':').map(Number)
-  return h * 60 + m
-}
-export function minutesToTime12(min: number) {
-  const h24 = Math.floor(min / 60) % 24
-  const m = min % 60
-  const period = h24 >= 12 ? 'PM' : 'AM'
-  const h = ((h24 + 11) % 12) + 1
-  return `${h}:${String(m).padStart(2, '0')} ${period}`
-}
-function generateSlots(start: string, end: string) {
-  const startMin = timeToMinutes(start)
-  let endMin = timeToMinutes(end)
-  if (endMin <= startMin) endMin += 24 * 60
-  const slots: {
-    index: number
-    startMin: number
-    endMin: number
-  }[] = []
-  for (let m = startMin, i = 0; m < endMin; m += SLOT_MINUTES, i++) {
-    slots.push({
-      index: i,
-      startMin: m,
-      endMin: m + SLOT_MINUTES,
-    })
-  }
-  return slots
-}
-
-
 export function SelectorPage({
   selectedDates,
   startTime,

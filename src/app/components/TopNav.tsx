@@ -2,6 +2,7 @@
 import React from 'react'
 import { Dices, Sparkles as SparkIcon } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { redirect } from 'next/navigation';
 export function TopNav() {
   return (
     <motion.header
@@ -65,11 +66,9 @@ export function TopNav() {
         </div>
 
         <nav className="flex items-end gap-1">
-          {['Setup', 'Selector'].map((item) => {
-            const active = item === 'Setup'
-            return (
-              <motion.button
-                key={item}
+          <motion.button
+                
+                onClick={() => {redirect('/setup')}}
                 whileHover={{
                   y: -2,
                 }}
@@ -77,18 +76,10 @@ export function TopNav() {
                   y: 0,
                   scale: 0.97,
                 }}
-                className={`relative px-4 py-2 font-heading text-lg transition-colors rounded-t-md border-b-2 ${active ? 'border-burgundy text-burgundy font-bold bg-parchment-base/60' : 'border-transparent text-ink-light hover:text-burgundy hover:bg-parchment-base/30'}`}
+                className={`relative px-4 py-2 font-heading text-lg transition-colors rounded-t-md border-b-2 border-transparent text-ink-light hover:text-burgundy hover:bg-parchment-base/30`}
               >
-                {item}
-                {active && (
-                  <motion.span
-                    layoutId="nav-seal"
-                    className="-top-1 -right-1 absolute bg-burgundy shadow-[0_0_6px_rgba(184,134,11,0.6)] border border-gold rounded-full w-3 h-3"
-                  />
-                )}
+                Create New
               </motion.button>
-            )
-          })}
         </nav>
       </div>
     </motion.header>
