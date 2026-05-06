@@ -151,7 +151,7 @@ export function Sidebar({
         {/* Event Name */}
         <div className="flex flex-col gap-2">
           <label className="flex items-center gap-2 font-heading font-bold text-ink-light text-sm">
-            <Book size={16} /> Event Name
+            <Book size={16} /> Session Name
           </label>
           <input
             type="text"
@@ -163,7 +163,7 @@ export function Sidebar({
         {/* Timezone */}
         <div className="flex flex-col gap-2">
           <label className="flex items-center gap-2 font-heading font-bold text-ink-light text-sm">
-            <Globe size={16} /> Realm Timezone
+            <Globe size={16} /> Session Timezone
           </label>
           <SearchableSelect value={timezone} onChange={setTimezone} options={TIMEZONES} />
         </div>

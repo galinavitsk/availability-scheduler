@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-export function SearchableSelect({ value, onChange, options }: {
+export function SearchableSelect({ value, onChange, options,disabled }: {
   value: string
   onChange: (v: string) => void
   options: string[]
+  disabled?: boolean
 }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -34,6 +35,7 @@ export function SearchableSelect({ value, onChange, options }: {
   return (
     <div className="relative w-full">
       <input
+      disabled={disabled}
         ref={inputRef}
         className="w-full input-fantasy"
         value={open ? query : value.replaceAll('_', ' ')}
@@ -44,7 +46,7 @@ export function SearchableSelect({ value, onChange, options }: {
       {open && rect && createPortal(
         <ul
           style={{ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width }}
-          className="fixed z-[9999] bg-parchment-light border border-gold-light rounded shadow-lg max-h-52 overflow-y-auto scrollbar-hide"
+          className="z-[9999] fixed bg-parchment-light shadow-lg border border-gold-light rounded max-h-52 overflow-y-auto scrollbar-hide"
         >
           {filtered.length === 0
             ? <li className="px-3 py-2 text-ink-light text-sm italic">No results</li>

@@ -1,5 +1,7 @@
 "use client"
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+
+import 'rpg-awesome/css/rpg-awesome.min.css'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users,
@@ -18,21 +20,18 @@ import {
   Plus,
 } from 'lucide-react'
 import {
-  PARTY,
   SLOT_MINUTES,
   generateSlots,
   minutesToTime12,
-  mockPartyStatuses,
   formatDateParts,
   type Slot,
   type Status,
 } from '@/app/lib/availability'
+import { redirect, useParams } from 'next/navigation';
+import { red } from 'next/dist/lib/picocolors';
+import { ApiResponse, ApiStatus } from '@/app/types/ApiResponse';
+import {GetAllAvailabilities, GetSession} from '@/app/api/selector'
 interface CouncilPageProps {
-  selectedDates: Set<string>
-  startTime: string
-  endTime: string
-  timezone: string
-  onGoToSetup: () => void
 }
 interface Match {
   dateStr: string
@@ -42,17 +41,65 @@ interface Match {
   attendees: string[] // members confirmed to count for this window
   memberStatuses: Record<string, Status[]>
 }
-const HOUR_OPTIONS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6]
-const DM = PARTY.find((p) => p.role === 'dm')!
-const PLAYERS = PARTY.filter((p) => p.role === 'player')
+const HOUR_OPTIONS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6,7,8]
 interface FindRunsOpts {
   requiredMembers: Set<string>
   minPartySize: number
   includeMaybes: boolean
 }
-function findRuns(
+
+export function CouncilPage({
+}: CouncilPageProps) {
+  
+  const { slug } = useParams<{ slug: string }>()
+  const [desiredHours, setDesiredHours] = useState<number>(2)
+  const [includeMaybes, setIncludeMaybes] = useState(false)
+  const [requiredMembers, setRequiredMembers] = useState<Set<string>>(new Set())
+  const [party, setParty]=useState<{name:string, icon:string}[]>([])
+  const [minPartySize, setMinPartySize] = useState<number>(party.length)
+  const [selectedDates, setSelectedDates] = useState<Set<string> | null>(null)
+  const [startTime, setStartTime] = useState('19:00')
+  const [endTime, setEndTime] = useState('23:00')
+  const [timeZone, setTimeZone] = useState('UTC')
+  type PlayerAvailability = { localTimezone: string; slotsByDate: Record<string, Map<number, Status>> }
+  const [partyStatuses, setPartyStatuses] = useState<Record<string, PlayerAvailability>>({})
+  useEffect(() => {
+    GetSession(slug).then((res:ApiResponse) => {
+      if (res.status === ApiStatus.Success) {
+        setStartTime(res.data.startTime)
+        setEndTime(res.data.endTime)
+        setSelectedDates(new Set(res.data.selectedDates))
+        setTimeZone(res.data.timezone)
+      }
+    })
+    GetAllAvailabilities(slug).then((res:ApiResponse) => {
+      if (res.status === ApiStatus.Success) {
+        setParty(res.data.map((p:any) => ({name:p.name, icon:p.heroClass})))
+        const processed: Record<string, PlayerAvailability> = {}
+        for (const player of res.data) {
+          const slotsByDate: Record<string, Map<number, Status>> = {}
+          for (const [date, rawSlots] of Object.entries(player.slotsByDate || {})) {
+            const m = new Map<number, Status>()
+            for (const [idx, status] of Object.entries(rawSlots as Record<string, Status>)) {
+              m.set(Number(idx), status as Status)
+            }
+            slotsByDate[date] = m
+          }
+          processed[player.name] = { localTimezone: player.localTimezone, slotsByDate }
+        }
+        setPartyStatuses(processed)
+      }
+    })
+  },[slug])
+  const sortedDates = useMemo(
+    () => Array.from(selectedDates||[]).sort(),
+    [selectedDates],
+  )
+
+  function findRuns(
   slots: Slot[],
-  partyStatuses: Record<string, Map<number, Status>>,
+  partyStatuses: Record<string, PlayerAvailability>,
+  date: string,
   opts: FindRunsOpts,
 ): {
   startIdx: number
@@ -74,18 +121,9 @@ function findRuns(
     attendees: string[]
     allYes: boolean
   } => {
-    // Check DM (always required)
-    const dmStatus = partyStatuses[DM.name]?.get(i)
-    if (dmStatus !== 'yes' && !(opts.includeMaybes && dmStatus === 'maybe')) {
-      return {
-        ok: false,
-        attendees: [],
-        allYes: false,
-      }
-    }
     // Check required members (must be available)
     for (const reqName of opts.requiredMembers) {
-      const s = partyStatuses[reqName]?.get(i)
+      const s = partyStatuses[reqName]?.slotsByDate[date]?.get(i)
       if (s !== 'yes' && !(opts.includeMaybes && s === 'maybe')) {
         return {
           ok: false,
@@ -94,11 +132,10 @@ function findRuns(
         }
       }
     }
-    // Count all available members (DM + any player who is yes/maybe-allowed)
-    const attendees: string[] = [DM.name]
-    let allYes = dmStatus === 'yes'
-    for (const p of PLAYERS) {
-      const s = partyStatuses[p.name]?.get(i)
+    const attendees: string[] = []
+    let allYes = true
+    for (const p of party) {
+      const s = partyStatuses[p.name]?.slotsByDate[date]?.get(i)
       if (s === 'yes') {
         attendees.push(p.name)
       } else if (opts.includeMaybes && s === 'maybe') {
@@ -163,33 +200,19 @@ function findRuns(
 function statusesForRun(
   startIdx: number,
   endIdx: number,
-  partyStatuses: Record<string, Map<number, Status>>,
+  partyStatuses: Record<string, PlayerAvailability>,
+  date: string,
 ): Record<string, Status[]> {
   const out: Record<string, Status[]> = {}
-  for (const p of PARTY) {
+  for (const p of party) {
     const arr: Status[] = []
     for (let i = startIdx; i <= endIdx; i++) {
-      arr.push(partyStatuses[p.name]?.get(i) ?? 'no')
+      arr.push(partyStatuses[p.name]?.slotsByDate[date]?.get(i) ?? 'no')
     }
     out[p.name] = arr
   }
   return out
 }
-export function CouncilPage({
-  selectedDates,
-  startTime,
-  endTime,
-  timezone,
-  onGoToSetup,
-}: CouncilPageProps) {
-  const [desiredHours, setDesiredHours] = useState<number>(2)
-  const [includeMaybes, setIncludeMaybes] = useState(false)
-  const [requiredMembers, setRequiredMembers] = useState<Set<string>>(new Set())
-  const [minPartySize, setMinPartySize] = useState<number>(PARTY.length)
-  const sortedDates = useMemo(
-    () => Array.from(selectedDates||[]).sort(),
-    [selectedDates],
-  )
   const slots = useMemo(
     () => generateSlots(startTime, endTime),
     [startTime, endTime],
@@ -206,7 +229,7 @@ export function CouncilPage({
     })
   }
   const minRequired = requiredMembers.size + 1 // DM always counted
-  const maxParty = PARTY.length
+  const maxParty = party.length
   const adjustMinSize = (delta: number) => {
     setMinPartySize((s) => Math.max(minRequired, Math.min(maxParty, s + delta)))
   }
@@ -214,8 +237,7 @@ export function CouncilPage({
     const requiredSlots = Math.ceil((desiredHours * 60) / SLOT_MINUTES)
     const out: Match[] = []
     for (const dateStr of sortedDates) {
-      const partyStatuses = mockPartyStatuses(dateStr, slots.length)
-      const runs = findRuns(slots, partyStatuses, {
+      const runs = findRuns(slots, partyStatuses, dateStr, {
         requiredMembers,
         minPartySize,
         includeMaybes,
@@ -233,6 +255,7 @@ export function CouncilPage({
               run.startIdx,
               run.endIdx,
               partyStatuses,
+              dateStr,
             ),
           })
         }
@@ -255,6 +278,7 @@ export function CouncilPage({
     requiredMembers,
     minPartySize,
     maxParty,
+    partyStatuses,
   ])
   if (sortedDates.length === 0) {
     return (
@@ -291,13 +315,163 @@ export function CouncilPage({
             The Council has no sessions to deliberate. Begin by sealing dates in
             the Setup Chamber.
           </p>
-          <button onClick={onGoToSetup} className="btn-primary">
+          <button onClick={()=>{redirect("/setup")}} className="btn-primary">
             Visit the Setup Chamber
           </button>
         </div>
       </motion.div>
     )
   }
+
+  function MatchCard({
+  match,
+  desiredHours,
+  idx,
+  requiredMembers,
+}: {
+  match: Match
+  desiredHours: number
+  idx: number
+  requiredMembers: Set<string>
+}) {
+  const f = formatDateParts(match.dateStr)
+  const durationHrs = (match.endMin - match.startMin) / 60
+  const isPartial = match.attendees.length < party.length
+  const missing = party.filter((p) => !match.attendees.includes(p.name))
+  return (
+    <motion.div
+      layout
+      initial={{
+        opacity: 0,
+        y: 12,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
+      exit={{
+        opacity: 0,
+        scale: 0.96,
+      }}
+      transition={{
+        delay: 0.03 * Math.min(idx, 8),
+        duration: 0.3,
+      }}
+      whileHover={{
+        y: -3,
+      }}
+      className={`parchment-panel p-4 flex flex-col md:flex-row md:items-center gap-4 ${match.perfect ? 'ring-2 ring-offset-2 ring-offset-parchment-base ring-gold shadow-[0_0_18px_rgba(184,134,11,0.25)]' : ''}`}
+    >
+      {/* Date block */}
+      <div className="flex flex-shrink-0 items-center gap-3 md:w-52">
+        <div className="flex flex-col flex-shrink-0 justify-center items-center bg-parchment-base shadow-inner border-2 border-gold rounded-lg w-16 h-16">
+          <span className="font-heading text-[10px] text-burgundy uppercase tracking-wider">
+            {f.month}
+          </span>
+          <span className="font-heading font-bold text-burgundy text-2xl leading-none">
+            {f.day}
+          </span>
+          <span className="font-heading text-[10px] text-ink-light">
+            {f.weekday}
+          </span>
+        </div>
+        <div className="flex flex-col">
+          <span className="font-heading font-bold text-ink text-sm leading-tight">
+            {f.long}
+          </span>
+          <span className="flex items-center gap-1 font-body text-[11px] text-ink-light italic">
+            <CalIcon size={10} />
+            {durationHrs}h window
+          </span>
+        </div>
+      </div>
+
+      {/* Time range */}
+      <div className="flex flex-col flex-1 gap-1.5">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <span className="font-heading font-bold text-burgundy text-2xl">
+            {minutesToTime12(match.startMin)}
+          </span>
+          <span className="font-heading text-ink-light">→</span>
+          <span className="font-heading font-bold text-burgundy text-2xl">
+            {minutesToTime12(match.endMin)}
+          </span>
+          {match.perfect ? (
+            <span className="flex items-center gap-1 bg-emerald-800 px-2 py-0.5 border border-gold rounded-full font-heading font-bold text-[10px] text-parchment-light">
+              <CheckCircle2 size={10} />
+              Full party
+            </span>
+          ) : isPartial ? (
+            <span className="bg-burgundy px-2 py-0.5 border border-gold rounded-full font-heading font-bold text-[10px] text-parchment-light">
+              Short-handed: {match.attendees.length}/{party.length}
+            </span>
+          ) : (
+            <span className="bg-gold px-2 py-0.5 border border-burgundy rounded-full font-heading font-bold text-[10px] text-ink">
+              Some maybes
+            </span>
+          )}
+        </div>
+        <div className="font-body text-[11px] text-ink-light italic">
+          {durationHrs > desiredHours
+            ? `${(durationHrs - desiredHours).toFixed(1)}h of slack`
+            : `Exactly ${desiredHours}h available`}
+          {missing.length > 0 && (
+            <>
+              {' '}
+              · without{' '}
+              {missing.map((m, i) => (
+                <span key={m.name}>
+                  <span className="font-bold text-burgundy not-italic">
+                    {m.name.split(' ')[0]}
+                  </span>
+                  {i < missing.length - 1 ? ', ' : ''}
+                </span>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Party attendance */}
+      <div className="flex flex-col gap-1.5 md:w-52">
+        <span className="font-heading text-[10px] text-ink-light/70 uppercase tracking-wider">
+          Attendance
+        </span>
+        <div className="flex flex-wrap gap-1.5">
+          {party.map((p) => {
+            const attending = match.attendees.includes(p.name)
+            const statuses = match.memberStatuses[p.name]
+            const allYes = attending && statuses.every((s) => s === 'yes')
+            const isRequired =  requiredMembers.has(p.name)
+            return (
+              <div
+                key={p.name}
+                title={`${p.name} — ${allYes ? 'fully available' : attending ? 'available (with maybes)' : 'not available'}${isRequired ? ' · required' : ''}`}
+                className="relative"
+              >
+                <div
+                  className={`w-9 h-9 rounded-full bg-parchment-base border-2 flex items-center justify-center text-base ${!attending ? 'border-burgundy/40 opacity-40 grayscale' : allYes ? 'border-emerald-700' : 'border-gold'}`}
+                >
+                  <i className={`ra ${p.icon}`} style={{ fontSize: '0.9rem' }} />
+                </div>
+                {/* Status dot */}
+                <span
+                  className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-parchment-light ${!attending ? 'bg-burgundy' : allYes ? 'bg-emerald-700' : 'bg-gold'}`}
+                />
+                {/* Required marker */}
+                {isRequired && attending && (
+                  <span className="-top-1 -left-1 absolute flex justify-center items-center bg-burgundy border border-gold rounded-full w-3.5 h-3.5">
+                    <Star size={7} className="fill-gold text-gold" />
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
   return (
     <motion.div
       initial={{
@@ -456,25 +630,8 @@ export function CouncilPage({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {/* DM — locked */}
-          <div
-            className="flex items-center gap-2 bg-burgundy shadow-[0_0_10px_rgba(184,134,11,0.4)] px-3 py-2 border-2 border-burgundy rounded-lg text-parchment-light cursor-not-allowed"
-            title="The Dungeon Master is always required"
-          >
-            <span className="text-base leading-none">{DM.glyph}</span>
-            <div className="flex flex-col leading-tight">
-              <span className="flex items-center gap-1 font-heading font-bold text-xs">
-                {DM.name}
-                <Lock size={10} />
-              </span>
-              <span className="text-[9px] text-gold-light italic">
-                Always required
-              </span>
-            </div>
-          </div>
-
           {/* Players — toggleable */}
-          {PLAYERS.map((p) => {
+          {party.map((p) => {
             const required = requiredMembers.has(p.name)
             return (
               <motion.button
@@ -488,15 +645,11 @@ export function CouncilPage({
                 }}
                 className={`px-3 py-2 rounded-lg border-2 flex items-center gap-2 transition-all ${required ? 'bg-gold/30 border-gold text-ink shadow-[0_0_8px_rgba(184,134,11,0.3)]' : 'bg-parchment-base border-gold-light/40 text-ink-light hover:border-gold hover:text-burgundy'}`}
               >
-                <span className="text-base leading-none">{p.glyph}</span>
+                <span className="text-base leading-none">
+                  <i className={`ra ${p.icon}`} style={{ fontSize: '0.9rem' }} /></span>
                 <div className="flex flex-col text-left leading-tight">
                   <span className="flex items-center gap-1 font-heading font-bold text-xs">
                     {p.name}
-                    {p.isYou && (
-                      <span className="font-bold text-[8px] text-burgundy uppercase">
-                        you
-                      </span>
-                    )}
                   </span>
                   <span className="flex items-center gap-1 text-[9px] text-ink-light/70 italic">
                     {required ? (
@@ -508,7 +661,7 @@ export function CouncilPage({
                         Required
                       </>
                     ) : (
-                      <>· {p.class}</>
+                      <></>
                     )}
                   </span>
                 </div>
@@ -613,154 +766,6 @@ export function CouncilPage({
     </motion.div>
   )
 }
-function MatchCard({
-  match,
-  desiredHours,
-  idx,
-  requiredMembers,
-}: {
-  match: Match
-  desiredHours: number
-  idx: number
-  requiredMembers: Set<string>
-}) {
-  const f = formatDateParts(match.dateStr)
-  const durationHrs = (match.endMin - match.startMin) / 60
-  const isPartial = match.attendees.length < PARTY.length
-  const missing = PARTY.filter((p) => !match.attendees.includes(p.name))
-  return (
-    <motion.div
-      layout
-      initial={{
-        opacity: 0,
-        y: 12,
-      }}
-      animate={{
-        opacity: 1,
-        y: 0,
-      }}
-      exit={{
-        opacity: 0,
-        scale: 0.96,
-      }}
-      transition={{
-        delay: 0.03 * Math.min(idx, 8),
-        duration: 0.3,
-      }}
-      whileHover={{
-        y: -3,
-      }}
-      className={`parchment-panel p-4 flex flex-col md:flex-row md:items-center gap-4 ${match.perfect ? 'ring-2 ring-offset-2 ring-offset-parchment-base ring-gold shadow-[0_0_18px_rgba(184,134,11,0.25)]' : ''}`}
-    >
-      {/* Date block */}
-      <div className="flex flex-shrink-0 items-center gap-3 md:w-52">
-        <div className="flex flex-col flex-shrink-0 justify-center items-center bg-parchment-base shadow-inner border-2 border-gold rounded-lg w-16 h-16">
-          <span className="font-heading text-[10px] text-burgundy uppercase tracking-wider">
-            {f.month}
-          </span>
-          <span className="font-heading font-bold text-burgundy text-2xl leading-none">
-            {f.day}
-          </span>
-          <span className="font-heading text-[10px] text-ink-light">
-            {f.weekday}
-          </span>
-        </div>
-        <div className="flex flex-col">
-          <span className="font-heading font-bold text-ink text-sm leading-tight">
-            {f.long}
-          </span>
-          <span className="flex items-center gap-1 font-body text-[11px] text-ink-light italic">
-            <CalIcon size={10} />
-            {durationHrs}h window
-          </span>
-        </div>
-      </div>
 
-      {/* Time range */}
-      <div className="flex flex-col flex-1 gap-1.5">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <span className="font-heading font-bold text-burgundy text-2xl">
-            {minutesToTime12(match.startMin)}
-          </span>
-          <span className="font-heading text-ink-light">→</span>
-          <span className="font-heading font-bold text-burgundy text-2xl">
-            {minutesToTime12(match.endMin)}
-          </span>
-          {match.perfect ? (
-            <span className="flex items-center gap-1 bg-emerald-800 px-2 py-0.5 border border-gold rounded-full font-heading font-bold text-[10px] text-parchment-light">
-              <CheckCircle2 size={10} />
-              Full party
-            </span>
-          ) : isPartial ? (
-            <span className="bg-burgundy px-2 py-0.5 border border-gold rounded-full font-heading font-bold text-[10px] text-parchment-light">
-              Short-handed: {match.attendees.length}/{PARTY.length}
-            </span>
-          ) : (
-            <span className="bg-gold px-2 py-0.5 border border-burgundy rounded-full font-heading font-bold text-[10px] text-ink">
-              Some maybes
-            </span>
-          )}
-        </div>
-        <div className="font-body text-[11px] text-ink-light italic">
-          {durationHrs > desiredHours
-            ? `${(durationHrs - desiredHours).toFixed(1)}h of slack`
-            : `Exactly ${desiredHours}h available`}
-          {missing.length > 0 && (
-            <>
-              {' '}
-              · without{' '}
-              {missing.map((m, i) => (
-                <span key={m.name}>
-                  <span className="font-bold text-burgundy not-italic">
-                    {m.name.split(' ')[0]}
-                  </span>
-                  {i < missing.length - 1 ? ', ' : ''}
-                </span>
-              ))}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Party attendance */}
-      <div className="flex flex-col gap-1.5 md:w-52">
-        <span className="font-heading text-[10px] text-ink-light/70 uppercase tracking-wider">
-          Attendance
-        </span>
-        <div className="flex flex-wrap gap-1.5">
-          {PARTY.map((p) => {
-            const attending = match.attendees.includes(p.name)
-            const statuses = match.memberStatuses[p.name]
-            const allYes = attending && statuses.every((s) => s === 'yes')
-            const isRequired = p.role === 'dm' || requiredMembers.has(p.name)
-            return (
-              <div
-                key={p.name}
-                title={`${p.name} — ${allYes ? 'fully available' : attending ? 'available (with maybes)' : 'not available'}${isRequired ? ' · required' : ''}`}
-                className="relative"
-              >
-                <div
-                  className={`w-9 h-9 rounded-full bg-parchment-base border-2 flex items-center justify-center text-base ${!attending ? 'border-burgundy/40 opacity-40 grayscale' : allYes ? 'border-emerald-700' : 'border-gold'}`}
-                >
-                  {p.glyph}
-                </div>
-                {/* Status dot */}
-                <span
-                  className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-parchment-light ${!attending ? 'bg-burgundy' : allYes ? 'bg-emerald-700' : 'bg-gold'}`}
-                />
-                {/* Required marker */}
-                {isRequired && attending && (
-                  <span className="-top-1 -left-1 absolute flex justify-center items-center bg-burgundy border border-gold rounded-full w-3.5 h-3.5">
-                    <Star size={7} className="fill-gold text-gold" />
-                  </span>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </motion.div>
-  )
-}
 
 export default CouncilPage

@@ -140,7 +140,7 @@ export function Calendar({
           >
             Today
           </button>
-          <div className="flex border border-burgundy rounded overflow-hidden">
+          <div className="flex shrink-0 border border-burgundy rounded overflow-hidden">
             <motion.button
               whileTap={{
                 scale: 0.9,

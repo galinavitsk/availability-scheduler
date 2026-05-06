@@ -1,6 +1,6 @@
 "use client"
 import 'rpg-awesome/css/rpg-awesome.min.css'
-import React, { useMemo, useState, useRef, Component, ComponentType, useEffect } from 'react'
+import React, { useMemo, useState, useRef,  ComponentType, useEffect } from 'react'
 import { redirect, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Send,
   Castle,
-  Clock,
   Eraser,
   Swords,
   HelpCircle,
@@ -31,19 +30,14 @@ function convertTime(timeStr: string, fromTz: string, toTz: string, refDate: str
 }
 import { SessionRow } from './SessionRow'
 import { SearchableSelect } from '@/app/components/SearchableSelect'
-import { generateSlots, minutesToTime12, timeToMinutes } from '@/app/lib/availability';
-import { useRouter } from 'next/navigation';
-import { GetSession } from '@/app/api/selector';
+import { generateSlots } from '@/app/lib/availability';
+import { GetSession,SaveAvailability,GetAllAvailabilities,UpdateAvailability } from '@/app/api/selector';
 import { ApiStatus } from '@/app/types/ApiResponse';
+import { toast } from 'react-toastify';
 type Brush = Status | 'erase'
 interface SelectorPageProps {
   session: Session
-  selectedDates: Set<string>
-  startTime: string
-  endTime: string
-  timezone: string
-  templateDays: Set<number>
-  onGoToSetup: () => void
+  previousAvailabilities: any
 }
 
 
@@ -109,16 +103,14 @@ export const STATUS_META: Record<
 }
 export function SelectorPage({
   session,
-  selectedDates,
-  startTime,
-  endTime,
-  timezone,
-  onGoToSetup,
+  previousAvailabilities
 }: SelectorPageProps) {
   useEffect(() => {
     
   })
   const [name, setName] = useState('')
+  const [duplicateName, setDuplicateName] = useState(false)
+  const [updating, setUpdating] = useState(false)
 
   const [heroClass, setHeroClass] = useState('ra-fairy-wand')
   const [localTimezone, setLocalTimezone] = useState(() => dayjs.tz.guess())
@@ -139,9 +131,14 @@ export function SelectorPage({
     () => Array.from(session?.selectedDates||[]).sort(),
     [session],
   )
+  const startTime = useMemo(() => session?.startTime, [session])
+  const endTime = useMemo(() => session?.endTime, [session])
+
+  const timezone = useMemo(() => session?.timezone, [session])
+
   const slots = useMemo(
-    () => generateSlots(session?.startTime, session?.endTime),
-    [session.startTime, session.endTime],
+    () => generateSlots(startTime,endTime),
+    [startTime,endTime],
   )
   const updateSlots = (
     date: string,
@@ -257,8 +254,23 @@ export function SelectorPage({
   }, [slotsByDate, sortedDates])
   const handleSubmit = () => {
     setSubmitted(true)
+    if(updating){
+      UpdateAvailability(previousAvailabilities.find((av:any) => av.name === name).id, slotsByDate).then((res:any) => {
+        if (res.error) {
+          toast.error(res.error)
+        }
+      })
+      return;
+    }
+    SaveAvailability(session, name, heroClass, slotsByDate, localTimezone).then((res:any) => {
+      if (res.status===ApiStatus.Failure) {
+        toast.error(res.error)
+      }
+    })
+    //redirect(`/council/${session?.slug}`)
     setTimeout(() => setSubmitted(false), 3500)
   }
+
   if (sortedDates.length === 0) {
     return (
       <motion.div
@@ -294,7 +306,7 @@ export function SelectorPage({
             No sessions have been sealed yet. The Dungeon Master must first lay
             the campaign's foundations before brave souls may pledge their time.
           </p>
-          <button onClick={onGoToSetup} className="btn-primary">
+          <button onClick={() => redirect('/setup')} className="btn-primary">
             Visit the Setup Chamber
           </button>
         </div>
@@ -358,11 +370,38 @@ export function SelectorPage({
             </label>
             <input
               type="text"
+              disabled={updating}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                if(previousAvailabilities.map((a: any) => a.name).includes(e.target.value)){
+                  setDuplicateName(true)
+                }
+                setName(e.target.value)
+              }}
               placeholder="Anonymous Adventurer"
               className="w-48 input-fantasy"
             />
+            <span className="text-xs">{duplicateName && <>Name already taken! <br/>
+            <a className="text-burgundy underline cursor-pointer"
+            onClick={() => {
+              const prevAvailability = previousAvailabilities.find((a:any) => a.name === name)
+              if (prevAvailability) {
+                setHeroClass(prevAvailability.heroClass)
+                setLocalTimezone(prevAvailability.localTimezone)
+                const convertedSlotsByDate: Record<string, Map<number, Status>> = {}
+                for (const [date, slots] of Object.entries(prevAvailability.slotsByDate)) {
+                  const convertedSlots = new Map()
+                  for (const [slot, status] of Object.entries(slots || {})) {
+                    convertedSlots.set(Number(slot), status)
+                  }
+                  convertedSlotsByDate[date] = convertedSlots
+                }
+                setSlotsByDate(convertedSlotsByDate)
+                setDuplicateName(false);
+                setUpdating(true)
+              }
+             }}
+            >Load previous commitment</a></> } </span>
           </div>
           <div className="flex flex-col gap-1">
             <label className="font-heading font-bold text-ink-light text-xs">Icon</label>
@@ -370,11 +409,13 @@ export function SelectorPage({
               {HEROIC_CLASSES.map((icon) => (
                 <motion.button
                   key={icon}
+                  disabled={previousAvailabilities?.map((a:any) => a.heroClass).includes(icon) || updating}
                   type="button"
                   onClick={() => setHeroClass(icon)}
-                  whileHover={{ scale: 1.1 }}
+                  whileHover={{ scale: previousAvailabilities?.map((a:any) => a.heroClass).includes(icon) || updating ? 1 : 1.1 }}
                   whileTap={{ scale: 0.92 }}
-                  className={`flex items-center justify-center w-8 h-8 rounded border-2 transition-all ${heroClass === icon ? 'bg-burgundy border-gold text-gold shadow-[0_0_8px_rgba(184,134,11,0.5)]' : 'bg-parchment-base border-gold-light/30 text-ink-light hover:border-gold hover:text-burgundy'}`}
+                  className={`flex items-center justify-center w-8 h-8 rounded border-2 transition-all ${heroClass === icon ? 'bg-burgundy border-gold text-gold shadow-[0_0_8px_rgba(184,134,11,0.5)]' : 'bg-parchment-base border-gold-light/30 text-ink-light hover:border-gold hover:text-burgundy'}
+                    ${(previousAvailabilities?.map((a:any) => a.heroClass).includes(icon) || updating) && 'opacity-50 cursor-not-allowed border--gold-light/30 text-ink-light'}`}
                 >
                   <i className={`ra ${icon}`} style={{ fontSize: '0.9rem' }} />
                 </motion.button>
@@ -386,7 +427,7 @@ export function SelectorPage({
               Your Timezone
             </label>
             <div className="w-48">
-              <SearchableSelect value={localTimezone} onChange={setLocalTimezone} options={TIMEZONES} />
+              <SearchableSelect value={localTimezone} onChange={setLocalTimezone} options={TIMEZONES} disabled = {updating}/>
             </div>
           </div>
         </div>
@@ -544,7 +585,7 @@ export function SelectorPage({
         </div>
         <button
           onClick={handleSubmit}
-          disabled={totals.pledgedDays === 0 && totals.noHours === 0}
+          disabled={totals.pledgedDays === 0 && totals.noHours === 0 || duplicateName}
           className="flex items-center gap-2 btn-primary"
         >
           <Send size={16} />
@@ -606,8 +647,7 @@ export function SelectorPage({
                 Pledge Recorded!
               </h3>
               <p className="font-body text-ink-light text-sm italic">
-                {name || 'Brave adventurer'}, the chronicler has
-                inked thy hours into the campaign tome.
+                {name || 'Brave adventurer'}, your pledge has been recorded.
               </p>
             </motion.div>
           </motion.div>
@@ -645,17 +685,17 @@ function Stat({
 
 export default function SelectorPageRoute() {
   const { slug } = useParams<{ slug: string }>()
-  const [selectedDates] = useState<Set<string>>(new Set(
-    Array.from({ length: 7 }).map((_, i) => dayjs().add(i, 'day').format('YYYY-MM-DD')),
-  ))
-  const [startTime] = useState('19:00')
-  const [endTime] = useState('23:00')
-  const [timezone] = useState('America/New_York')
   const [session, setSession] = useState<Session>({} as Session)
+  const [previousAvailabilities, setPreviousAvailabilities] = useState<any>()
   
   useEffect(() => {
     if (slug) {
-      GetSession(slug).then((res) => {
+      GetSession(slug).then((res:any) => {
+        GetAllAvailabilities(slug).then((res:any) => {
+          if(res.status === ApiStatus.Success) {
+            setPreviousAvailabilities(res.data)
+          }
+        })
         if(res.status === ApiStatus.Success) {
           setSession(res.data)
         }
@@ -668,12 +708,7 @@ export default function SelectorPageRoute() {
   return (
     <SelectorPage
       session={session}
-      selectedDates={selectedDates}
-      startTime={startTime}
-      endTime={endTime}
-      timezone={timezone}
-      templateDays={new Set()}
-      onGoToSetup={() => {}}
+      previousAvailabilities={previousAvailabilities}
     />
   )
-}  
+}
