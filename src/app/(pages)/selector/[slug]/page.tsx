@@ -1,5 +1,7 @@
 "use client"
-import React, { useMemo, useState, useRef, Component, ComponentType } from 'react'
+import 'rpg-awesome/css/rpg-awesome.min.css'
+import React, { useMemo, useState, useRef, Component, ComponentType, useEffect } from 'react'
+import { redirect, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   User,
@@ -15,11 +17,27 @@ import {
   Shield,
   Wand2,
 } from 'lucide-react'
-import dayjs from 'dayjs';
-import { SessionRow } from './SessionRow';
+import dayjs from 'dayjs'
+import tzPlugin from 'dayjs/plugin/timezone'
+import utcPlugin from 'dayjs/plugin/utc'
+
+dayjs.extend(utcPlugin)
+dayjs.extend(tzPlugin)
+
+const TIMEZONES = Intl.supportedValuesOf('timeZone')
+
+function convertTime(timeStr: string, fromTz: string, toTz: string, refDate: string) {
+  return dayjs.tz(`${refDate} ${timeStr}`, fromTz).tz(toTz).format('h:mm A')
+}
+import { SessionRow } from './SessionRow'
+import { SearchableSelect } from '@/app/components/SearchableSelect'
 import { generateSlots, minutesToTime12, timeToMinutes } from '@/app/lib/availability';
+import { useRouter } from 'next/navigation';
+import { GetSession } from '@/app/api/selector';
+import { ApiStatus } from '@/app/types/ApiResponse';
 type Brush = Status | 'erase'
 interface SelectorPageProps {
+  session: Session
   selectedDates: Set<string>
   startTime: string
   endTime: string
@@ -27,22 +45,24 @@ interface SelectorPageProps {
   templateDays: Set<number>
   onGoToSetup: () => void
 }
+
+
 const SLOT_MINUTES = 30
 
 
 const HEROIC_CLASSES = [
-  'Wizard',
-  'Bard',
-  'Paladin',
-  'Rogue',
-  'Ranger',
-  'Cleric',
-  'Druid',
-  'Warlock',
-  'Sorcerer',
-  'Barbarian',
-  'Fighter',
-  'Monk',
+  'ra-fairy-wand',
+  'ra-horn-call',
+  'ra-heavy-shield',
+  'ra-cloak-and-dagger',
+  'ra-crossbow',
+  'ra-angel-wings',
+  'ra-leaf',
+  'ra-arcane-mask',
+  'ra-lightning-bolt',
+  'ra-axe-swing',
+  'ra-crossed-swords',
+  'ra-hand',
 ]
 
 export const STATUS_META: Record<
@@ -88,14 +108,21 @@ export const STATUS_META: Record<
   },
 }
 export function SelectorPage({
+  session,
   selectedDates,
   startTime,
   endTime,
   timezone,
   onGoToSetup,
 }: SelectorPageProps) {
+  useEffect(() => {
+    
+  })
   const [name, setName] = useState('')
-  const [heroClass, setHeroClass] = useState('Wizard')
+
+  const [heroClass, setHeroClass] = useState('ra-fairy-wand')
+  const [localTimezone, setLocalTimezone] = useState(() => dayjs.tz.guess())
+
   // Per-date map of slotIndex -> Status
   const [slotsByDate, setSlotsByDate] = useState<
     Record<string, Map<number, Status>>
@@ -109,12 +136,12 @@ export function SelectorPage({
   } | null>(null)
   const dragDateRef = useRef<string | null>(null)
   const sortedDates = useMemo(
-    () => Array.from(selectedDates).sort(),
-    [selectedDates],
+    () => Array.from(session?.selectedDates||[]).sort(),
+    [session],
   )
   const slots = useMemo(
-    () => generateSlots(startTime, endTime),
-    [startTime, endTime],
+    () => generateSlots(session?.startTime, session?.endTime),
+    [session.startTime, session.endTime],
   )
   const updateSlots = (
     date: string,
@@ -311,14 +338,16 @@ export function SelectorPage({
           <p className="font-body text-ink-light text-sm italic">
             The DM's window:{' '}
             <span className="font-bold text-burgundy not-italic">
-              {minutesToTime12(timeToMinutes(startTime))}
-            </span>{' '}
-            –{' '}
+              {convertTime(startTime, timezone, localTimezone, sortedDates[0] ?? dayjs().format('YYYY-MM-DD'))}
+            </span>
+            {' '}–{' '}
             <span className="font-bold text-burgundy not-italic">
-              {minutesToTime12(timeToMinutes(endTime))}
-            </span>{' '}
-            ({timezone.replace('_', ' ')}). Choose a brush, then paint each
-            half-hour with thy fate.
+              {convertTime(endTime, timezone, localTimezone, sortedDates[0] ?? dayjs().format('YYYY-MM-DD'))}
+            </span>
+            {localTimezone !== timezone && (
+              <span className="text-ink-light/60"> ({localTimezone.replaceAll('_', ' ')})</span>
+            )}
+            {'. '}Choose a brush, then paint each half-hour with thy fate.
           </p>
         </div>
 
@@ -336,18 +365,29 @@ export function SelectorPage({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="font-heading font-bold text-ink-light text-xs">
-              Class
-            </label>
-            <select
-              value={heroClass}
-              onChange={(e) => setHeroClass(e.target.value)}
-              className="w-36 input-fantasy"
-            >
-              {HEROIC_CLASSES.map((c) => (
-                <option key={c}>{c}</option>
+            <label className="font-heading font-bold text-ink-light text-xs">Icon</label>
+            <div className="gap-1 grid grid-cols-6">
+              {HEROIC_CLASSES.map((icon) => (
+                <motion.button
+                  key={icon}
+                  type="button"
+                  onClick={() => setHeroClass(icon)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.92 }}
+                  className={`flex items-center justify-center w-8 h-8 rounded border-2 transition-all ${heroClass === icon ? 'bg-burgundy border-gold text-gold shadow-[0_0_8px_rgba(184,134,11,0.5)]' : 'bg-parchment-base border-gold-light/30 text-ink-light hover:border-gold hover:text-burgundy'}`}
+                >
+                  <i className={`ra ${icon}`} style={{ fontSize: '0.9rem' }} />
+                </motion.button>
               ))}
-            </select>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-1.5 font-heading font-bold text-ink-light text-xs">
+              Your Timezone
+            </label>
+            <div className="w-48">
+              <SearchableSelect value={localTimezone} onChange={setLocalTimezone} options={TIMEZONES} />
+            </div>
           </div>
         </div>
       </motion.div>
@@ -448,6 +488,8 @@ export function SelectorPage({
             idx={idx}
             slots={slots}
             statusMap={slotsByDate[date] ?? new Map()}
+            eventTimezone={timezone}
+            localTimezone={localTimezone}
             onSlotMouseDown={beginDrag}
             onSlotMouseEnter={continueDrag}
             onFill={(status) => fillSession(date, status)}
@@ -564,8 +606,7 @@ export function SelectorPage({
                 Pledge Recorded!
               </h3>
               <p className="font-body text-ink-light text-sm italic">
-                {name || 'Brave adventurer'}
-                {name ? `, ${heroClass.toLowerCase()},` : ''} the chronicler has
+                {name || 'Brave adventurer'}, the chronicler has
                 inked thy hours into the campaign tome.
               </p>
             </motion.div>
@@ -603,14 +644,30 @@ function Stat({
 }
 
 export default function SelectorPageRoute() {
+  const { slug } = useParams<{ slug: string }>()
   const [selectedDates] = useState<Set<string>>(new Set(
     Array.from({ length: 7 }).map((_, i) => dayjs().add(i, 'day').format('YYYY-MM-DD')),
   ))
   const [startTime] = useState('19:00')
   const [endTime] = useState('23:00')
   const [timezone] = useState('America/New_York')
+  const [session, setSession] = useState<Session>({} as Session)
+  
+  useEffect(() => {
+    if (slug) {
+      GetSession(slug).then((res) => {
+        if(res.status === ApiStatus.Success) {
+          setSession(res.data)
+        }
+        else{
+          redirect('/')
+        }
+      })
+    }
+  },[slug])
   return (
     <SelectorPage
+      session={session}
       selectedDates={selectedDates}
       startTime={startTime}
       endTime={endTime}
@@ -619,4 +676,4 @@ export default function SelectorPageRoute() {
       onGoToSetup={() => {}}
     />
   )
-}
+}  

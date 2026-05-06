@@ -1,8 +1,19 @@
-import { minutesToTime12 } from "@/app/lib/availability";
+import dayjs from "dayjs";
+import tzPlugin from "dayjs/plugin/timezone";
+import utcPlugin from "dayjs/plugin/utc";
 import { motion } from "framer-motion";
 import { Clock } from "lucide-react";
 import { useMemo } from "react";
 import { STATUS_META } from "./page";
+
+dayjs.extend(utcPlugin);
+dayjs.extend(tzPlugin);
+
+function convertMin(date: string, minutes: number, fromTz: string, toTz: string): string {
+  const hh = Math.floor(minutes / 60).toString().padStart(2, '0')
+  const mm = (minutes % 60).toString().padStart(2, '0')
+  return dayjs.tz(`${date} ${hh}:${mm}`, fromTz).tz(toTz).format('h:mm A')
+}
 
 function formatDate(dateStr: string) {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -64,6 +75,8 @@ export function SessionRow({
   idx,
   slots,
   statusMap,
+  eventTimezone,
+  localTimezone,
   onSlotMouseDown,
   onSlotMouseEnter,
   onFill,
@@ -77,6 +90,8 @@ export function SessionRow({
     endMin: number
   }[]
   statusMap: Map<number, Status>
+  eventTimezone: string
+  localTimezone: string
   onSlotMouseDown: (date: string, slotIdx: number) => void
   onSlotMouseEnter: (date: string, slotIdx: number) => void
   onFill: (status: Status) => void
@@ -123,8 +138,8 @@ export function SessionRow({
             </span>
             <span className="flex items-center gap-1 font-body text-ink-light text-xs italic">
               <Clock size={10} />
-              {minutesToTime12(slots[0]?.startMin ?? 0)} –{' '}
-              {minutesToTime12(slots[slots.length - 1]?.endMin ?? 0)}
+              {convertMin(date, slots[0]?.startMin ?? 0, eventTimezone, localTimezone)} –{' '}
+              {convertMin(date, slots[slots.length - 1]?.endMin ?? 0, eventTimezone, localTimezone)}
             </span>
           </div>
         </div>
@@ -173,7 +188,7 @@ export function SessionRow({
                 key={s.index}
                 className={`text-center ${isHour ? '' : 'invisible'}`}
               >
-                {isHour && minutesToTime12(s.startMin).replace(':00 ', '')}
+                {isHour && convertMin(date, s.startMin, eventTimezone, localTimezone).replace(':00 ', '')}
               </div>
             )
           })}
@@ -230,7 +245,7 @@ export function SessionRow({
                   className={`px-2 py-0.5 rounded-full text-xs font-heading font-bold border flex items-center gap-1 ${meta.pillClass}`}
                 >
                   <Icon size={10} />
-                  {minutesToTime12(c.start)} – {minutesToTime12(c.end)}
+                  {convertMin(date, c.start, eventTimezone, localTimezone)} – {convertMin(date, c.end, eventTimezone, localTimezone)}
                 </span>
               )
             })
@@ -250,10 +265,6 @@ export function SessionRow({
           <span className="flex items-center gap-1">
             <span className="bg-burgundy border border-gold rounded-sm w-3 h-3" />{' '}
             unavailable
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="bg-gold/30 border border-gold/40 rounded-sm w-3 h-3" />{' '}
-            party gathered
           </span>
         </div>
       </div>

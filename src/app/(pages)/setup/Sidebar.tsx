@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { SearchableSelect } from '@/app/components/SearchableSelect'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Globe,
@@ -16,72 +17,6 @@ import {
   Book,
 } from 'lucide-react'
 
-function SearchableSelect({ value, onChange, options }: {
-  value: string
-  onChange: (v: string) => void
-  options: string[]
-}) {
-  const [query, setQuery] = useState('')
-  const [open, setOpen] = useState(false)
-  const [rect, setRect] = useState<DOMRect | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const filtered = query
-    ? options.filter((o) => o.toLowerCase().includes(query.toLowerCase()))
-    : options
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (inputRef.current && !inputRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const handleFocus = () => {
-    setRect(inputRef.current?.getBoundingClientRect() ?? null)
-    setOpen(true)
-  }
-
-  const select = (tz: string) => {
-    onChange(tz)
-    setQuery('')
-    setOpen(false)
-  }
-
-  return (
-    <div className="relative w-full">
-      <input
-        ref={inputRef}
-        className="w-full input-fantasy"
-        value={open ? query : value.replaceAll('_', ' ')}
-        placeholder={value.replaceAll('_', ' ')}
-        onFocus={handleFocus}
-        onChange={(e) => setQuery(e.target.value.replaceAll(' ', '_'))}
-      />
-      {open && rect && createPortal(
-        <ul
-          style={{ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width }}
-          className="z-[9999] fixed bg-parchment-light shadow-lg border border-gold-light rounded max-h-52 overflow-y-auto scrollbar-hide"
-        >
-          {filtered.length === 0
-            ? <li className="px-3 py-2 text-ink-light text-sm italic">No results</li>
-            : filtered.map((tz) => (
-              <li
-                key={tz}
-                onMouseDown={() => select(tz)}
-                className={`px-3 py-1.5 text-sm cursor-pointer hover:bg-gold/20 font-body ${tz === value ? 'text-burgundy font-semibold' : 'text-ink'}`}
-              >
-                {tz.replaceAll('_', ' ')}
-              </li>
-            ))
-          }
-        </ul>,
-        document.body
-      )}
-    </div>
-  )
-}
 const TIMEZONES = Intl.supportedValuesOf('timeZone')
 const HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5)

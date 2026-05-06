@@ -10,6 +10,7 @@ import { Sidebar } from "@/app/(pages)/setup/Sidebar";
 import { Calendar } from "@/app/(pages)/setup/Calendar";
 import { CreateSession } from "@/app/api/setup";
 import { ApiStatus } from "@/app/types/ApiResponse";
+import { toast } from "react-toastify";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -21,6 +22,7 @@ export default function SetUp() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [showSealed, setShowSealed] = useState(false)
   const [eventName, setEventName] = useState('')
+  const [slug, setSlug] = useState('')
  
   const toggleDate = (dateStr: string) => {
     const newDates = new Set(selectedDates)
@@ -39,6 +41,10 @@ export default function SetUp() {
       (res) => {
         if (res.status === ApiStatus.Success) {
           setShowSealed(true)
+          setSlug(res.data.slug)
+        }
+        else{
+            toast.error(res.message)
         }
       },
     )
@@ -129,13 +135,12 @@ export default function SetUp() {
                 <Swords size={36} />
               </motion.div>
               <h3 className="mb-2 font-heading font-bold text-burgundy text-2xl">
-                The Covenant is Sealed!
+                The Sessions are planned!
               </h3>
               <p className="mb-6 font-body text-ink-light italic">
-                Your party shall be summoned across {selectedDates.size}{' '}
-                {selectedDates.size === 1 ? 'session' : 'sessions'} from{' '}
-                {startTime} to {endTime}, by the laws of{' '}
-                {timezone.replace('_', ' ')}.
+                Send the following link to your players:
+                <br/>
+                <span className="text-burgundy text-lg">http://localhost:3005/selector/{slug}</span>
               </p>
               <button
                 onClick={() => setShowSealed(false)}
