@@ -55,6 +55,7 @@ function CouncilPage() {
   const [selectedDates, setSelectedDates] = useState<Set<string> | null>(null)
   const [startTime, setStartTime] = useState('19:00')
   const [endTime, setEndTime] = useState('23:00')
+  const [timezone, setTimezone] = useState()
   type PlayerAvailability = { localTimezone: string; slotsByDate: Record<string, Map<number, Status>> }
   const [partyStatuses, setPartyStatuses] = useState<Record<string, PlayerAvailability>>({})
   useEffect(() => {
@@ -62,6 +63,7 @@ function CouncilPage() {
       if (res.status === ApiStatus.Success) {
         setStartTime(res.data.startTime)
         setEndTime(res.data.endTime)
+        setTimezone(res.data.timeZone.replace("_", " "))
         setSelectedDates(new Set(res.data.selectedDates))
       }
     })
@@ -509,7 +511,7 @@ function statusesForRun(
             </h2>
             <p className="font-body text-ink-light text-sm italic">
               Where the stars align — find every window when the party may
-              convene.
+              convene. In the <span className="text-burgundy">{timezone} </span> timezone
             </p>
           </div>
         </div>
