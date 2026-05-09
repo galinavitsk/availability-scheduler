@@ -140,7 +140,7 @@ export default function SetUp() {
               <p className="mb-6 font-body text-ink-light italic">
                 Send the following link to your players:
                 <br/>
-                <span className="text-burgundy text-lg">http://localhost:3005/selector/{slug}</span>
+                <span className="text-burgundy text-lg">https://quest-scheduler.vercel.app/selector/{slug}</span>
               </p>
               <button
                 onClick={() => setShowSealed(false)}
